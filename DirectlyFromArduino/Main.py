@@ -17,7 +17,7 @@ from sonarFunctionality.Interlocking import InterlockingSystem
 from communication.GUI_communication import TCPIn
 from communication.GUI_communication import TCPOut
 from communication.GUI_communication import UDP
-
+from communication.GUI_communication import serialCom
 import config
 
 
@@ -53,35 +53,20 @@ if __name__ == "__main__":
     PORT = 1422  # Port to listen on (non-privileged ports are > 1023)
     HEADERSIZE = 10
 
-    """
-    def changeOperatingMode(mode):
-        # Checks if input is different from last iteration
-        if mode == 0:
-            p.set_range(2) # Short range collision avoidance mode
-            p.set_step(8)
-            p.set_gain_setting(0)
-        elif mode == 1:
-            p.set_range(4) # Medium range collision avoidance mode
-            p.set_step(4)
-            p.set_gain_setting(0)
-        elif mode == 2:
-            p.set_range(50) # Aquaculture inspection mode
-            p.set_step(2)
-            p.set_gain_setting(1)
-        else:
-            print("Did not recognize mode command")
-            print("Corrupt or invalid data given")
-            return
-    """
+
 
 
     # Start a thread that handles communication with GUI
     #t1 = threading.Thread(target=communicationWithGUI, args=[HOST, PORT])
     #t1.start()
 
+    """
     # Initialize serial communication with Arduino UNO
     ardSer = serial.Serial('/dev/ttyACM0', 9600, timeout=1,
     parity=serial.PARITY_NONE, bytesize=serial.EIGHTBITS, stopbits=serial.STOPBITS_ONE)
+    """
+    SerialThread = threading.Thread(target=serialCom)
+    SerialThread.start()
 
     print("[INFO] Serial communication with Arduino is initialized!")
 
@@ -90,6 +75,7 @@ if __name__ == "__main__":
     s.bind((HOST, PORT))    # Binds <eth0> port to requested IP and Port
     s.listen(2)             # Specifies number of unaccepted connection before refusing new
 
+    """
     # Runs communication by sending and receiving data with GUI
     if config.address == "":
         print("[ATTENTION] Start computer script to initialize TCP communication with ROV!")
@@ -97,6 +83,8 @@ if __name__ == "__main__":
     TCPOut(s, HOST, PORT, HEADERSIZE)
     TCPThread = threading.Thread(target=TCPIn)
     TCPThread.start()
+    """
+
 
     """ Using UDP for camera transmission the camera will after stop and print <select timeout> to the console
     UDPThread = threading.Thread(target=UDP)
@@ -107,7 +95,6 @@ if __name__ == "__main__":
     # cam = cv2.VideoCapture(0)   # Initializes connection to camera
     # vs = VideoStream(src=0).start()
 
-
     while 1:
 
         p.transmitAngle(config.angle)
@@ -116,8 +103,8 @@ if __name__ == "__main__":
         for k in data :
             config.data_lst.append(k)
 
-
         # SERIAL WITH ARDUINO
+        """
         ArdDataOut = {}
         ArdDataOut["light"] = config.light # SET BY GUI: 0-255 light settings
         ArdDataOut["runZone"] = config.runZone # SET BY GUI: 1-8 Linear directions, 9 and 10 clock and counter-clock respectively
@@ -132,7 +119,14 @@ if __name__ == "__main__":
             config.pressure = ArdDataIn["Pressure"]
             config.leak = ArdDataIn["Leak"]
             ardSer.write(ArdDataOut.encode())   # Responds with data to Arduino
+        """
 
+        # If no TCP connection, try to establish one
+        if config.address == "":
+            print("[ATTENTION] Start computer script to initialize TCP communication with ROV!")
+            TCPOut(s, HOST, PORT, HEADERSIZE)
+            TCPThread = threading.Thread(target=TCPIn)
+            TCPThread.start()
 
         # Updating system variables for communication with GUI
         config.step = p.get_step()
@@ -143,7 +137,7 @@ if __name__ == "__main__":
 
         config.data_lst = []    # After sending last angle readings, reset for next iteration
 
-        print(f'light value communicated through TCP {config.light}')
+        # print(f'light value communicated through TCP {config.light}')
 
         if config.mode != prevMode:
             print("A new mode has been activated")
@@ -173,7 +167,6 @@ if __name__ == "__main__":
 
         # print(f"All currently locked zones: {ils.lockedZones}")
         # print(f"All zones locked angles: {ils.zoneLockedAngles}")
-        print("One loop in Python")
-        print("")
-
+        # print("One loop in Python")
+        # print("")
 

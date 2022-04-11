@@ -19,3 +19,4 @@ interlockedZones = []
 # General functionality
 address = ""
 clientsocket = ""
+newArduinoCommands = False

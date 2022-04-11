@@ -7,7 +7,9 @@ import threading
 import struct
 import math
 from imutils.video import VideoStream
-
+import serial
+import json
+import time
 
 class FrameSegment(object):
   """“””
@@ -27,7 +29,8 @@ class FrameSegment(object):
     Compress image and Break down
     into data segments
     “””"""
-    compress_img = cv2.resize(img, None, fx = 0.4, fy=0.4, interpolation=cv2.INTER_AREA)
+    # compress_img = cv2.resize(img, None, fx = 0.4, fy=0.4, interpolation=cv2.INTER_AREA) # 2 420 000 bytes
+    compress_img = cv2.resize(img, None, fx = 0.1, fy=0.1, interpolation=cv2.INTER_AREA)    # 150 802 bytes
     compress_img = cv2.imencode(".jpg", compress_img)[1]
 
     dat = compress_img.tostring()
@@ -69,7 +72,6 @@ def TCPIn():
 
             if len(full_msg)-HEADERSIZE == msglen:
                 GuiDataIn = pickle.loads(full_msg[HEADERSIZE:])  # Deserialize reponse from GUI
-
                 print("[ATTENTION] New data has been applied to global variables from GUI commands")
                 # Setting the global variables accordingly
                 config.light = GuiDataIn["light"]
@@ -77,6 +79,7 @@ def TCPIn():
                 config.forceReset = GuiDataIn["forceReset"]
                 config.mode = GuiDataIn["mode"]
                 # changeOperatingMode(GuiDataIn["mode"])  # SET BY GUI
+                config.newArduinoCommands = True
 
                 # Resetting variables for next iteration
                 receiving = False
@@ -141,6 +144,63 @@ def UDP():
     cv2.destroyAllWindows()
     s.close()
 
+def serialCom():
+
+    # Initialize serial communication with Arduino UNO
+    ardSer = serial.Serial('/dev/ttyACM0', 9600, timeout=1,
+    parity=serial.PARITY_NONE, bytesize=serial.EIGHTBITS, stopbits=serial.STOPBITS_ONE)
+    print(f'Arduino serial communication status: {ardSer.isOpen()}')
+
+
+    condSer = serial.Serial('/dev/ttyUSB0', 9600)
+    print(f'Conductivity sensor communication status: {condSer.isOpen()}')
+
+    time.sleep(2)
+
+    while 1:
+        """
+        SERIAL WITH CONDUCTIVITY SENSOR
+        """
+        condSer.write("do_sample\n".encode())   # Commands conductivity sensor to conduct sample of parameters
+
+        salinityReading = getAanderaaData(condSer, "get_salinity\n")
+        soundSpeedReading = getAanderaaData(condSer, "get_soundspeed\n")
+        densityReading = getAanderaaData(condSer, "get_density\n")
+        conductivityReading = getAanderaaData(condSer, "get_conductivity\n")
+
+        print(f'Salinity = {salinityReading}')
+        print(f'Sound of speed: {soundSpeedReading}')
+        print(f'Conductivity = {conductivityReading}')
+        print(f'density: {densityReading}')
+
+
+        """
+        SERIAL WITH ARDUINO
+        """
+
+        if config.newArduinoCommands:
+            ArdDataOut = {}
+            ArdDataOut["light"] = config.light # SET BY GUI: 0-255 light settings
+            ArdDataOut["runZone"] = config.runZone # SET BY GUI: 1-8 Linear directions, 9 and 10 clock and counter-clock respectively
+            ArdDataOut["locked"] = config.interlockedZones
+            ArdDataOut = json.dumps(ArdDataOut)
+            ardSer.write(ArdDataOut.encode())
+            config.newArduinoCommands = False
+
+        # If program takes longer to run, there might be problem with serial
+        # Band-aid solution could be to add delay in Arduino C++ script
+        if ardSer.in_waiting > 0:
+            ArdDataIn = json.loads(ardSer.readline())   # Deserializes input from Arduino
+            config.temp = ArdDataIn["Temp"]
+            config.pressure = ArdDataIn["Pressure"]
+            config.leak = ArdDataIn["Leak"]
+            # ardSer.write(ArdDataOut.encode())   # Responds with data to Arduino
+
+        condIn = condSer.readline()  # Have to read the buffer to stop future splitting issues
+
+
+
+
 
 """
 Can be used with the picture taking functionality used in TCPOut communication
@@ -149,3 +209,13 @@ def commpressImage(img, k):
     width = int((img.shape[1])/k)
     height = int((img.shape[0])/k)
     return cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA)
+
+def getAanderaaData(condSer, request_str):
+    condIn = b''
+    condIn = condSer.readline()  # Have to read the buffer to stop future splitting issues
+    condSer.write(request_str.encode())
+    condIn = condSer.readline().decode()
+    data = condIn.split('\t')
+    data = data[-1]
+    data = data.replace('\r\n', '')
+    return float(data)
