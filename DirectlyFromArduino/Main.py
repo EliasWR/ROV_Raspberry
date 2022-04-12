@@ -39,7 +39,7 @@ if __name__ == "__main__":
     p.set_sample_period(50) # Original: 80            Sets sample period in ticks
     p.set_number_of_samples(1200) # Original: 500     Determines the resolution (higher num -> finer details)
     p.set_range(50) # Initial mode
-    prevMode = 0
+    prevMode = -1
 
     # Initalize interlocking system for motor driving zones
     ils = InterlockingSystem()
@@ -86,10 +86,10 @@ if __name__ == "__main__":
     """
 
 
-    """ Using UDP for camera transmission the camera will after stop and print <select timeout> to the console
+    # Using UDP for camera transmission the camera will after stop and print <select timeout> to the console
     UDPThread = threading.Thread(target=UDP)
     UDPThread.start()
-    """
+
 
     print("OPENING CAMERA PORT")
     # cam = cv2.VideoCapture(0)   # Initializes connection to camera
@@ -100,26 +100,12 @@ if __name__ == "__main__":
         p.transmitAngle(config.angle)
         data = bytearray(getattr(p,'_data'))    # Fetches sonar echo strengths
 
+        config.data_lst = []    # After sending last angle readings, reset for next iteration
+
         for k in data :
             config.data_lst.append(k)
 
-        # SERIAL WITH ARDUINO
-        """
-        ArdDataOut = {}
-        ArdDataOut["light"] = config.light # SET BY GUI: 0-255 light settings
-        ArdDataOut["runZone"] = config.runZone # SET BY GUI: 1-8 Linear directions, 9 and 10 clock and counter-clock respectively
-        ArdDataOut["locked"] = ils.lockedZones
-        ArdDataOut = json.dumps(ArdDataOut)
 
-        # If program takes longer to run, there might be problem with serial
-        # Band-aid solution could be to add delay in Arduino C++ script
-        if ardSer.in_waiting > 0:
-            ArdDataIn = json.loads(ardSer.readline())   # Deserializes input from Arduino
-            config.temp = ArdDataIn["Temp"]
-            config.pressure = ArdDataIn["Pressure"]
-            config.leak = ArdDataIn["Leak"]
-            ardSer.write(ArdDataOut.encode())   # Responds with data to Arduino
-        """
 
         # If no TCP connection, try to establish one
         if config.address == "":
@@ -135,7 +121,7 @@ if __name__ == "__main__":
         # Sends sensor and system data to GUI
         TCPOut(s, HOST, PORT, HEADERSIZE)
 
-        config.data_lst = []    # After sending last angle readings, reset for next iteration
+
 
         # print(f'light value communicated through TCP {config.light}')
 
@@ -151,6 +137,7 @@ if __name__ == "__main__":
         if config.forceReset:
             print("Operator is forcing reset of all interlocked zones")
             ils.resetAllZones()
+
 
         # If object is found, interlock current zone
         if ils.findObject(config.data_lst):
@@ -169,4 +156,3 @@ if __name__ == "__main__":
         # print(f"All zones locked angles: {ils.zoneLockedAngles}")
         # print("One loop in Python")
         # print("")
-

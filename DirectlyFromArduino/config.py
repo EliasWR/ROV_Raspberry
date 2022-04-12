@@ -2,18 +2,21 @@
 # From GUI
 light= 0
 runZone = -1
-mode = 0
+mode = 1
 forceReset = False
 
 # To GUI
 # image
 temp = 21.0
-pressure = 1000
+depth = 0
 leak = True
 angle = 0
 data_lst = []
 step = 0
 interlockedZones = []
+salinity = 0
+conductivity = 150
+density = 1000
 
 
 # General functionality

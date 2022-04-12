@@ -30,7 +30,7 @@ class FrameSegment(object):
     into data segments
     “””"""
     # compress_img = cv2.resize(img, None, fx = 0.4, fy=0.4, interpolation=cv2.INTER_AREA) # 2 420 000 bytes
-    compress_img = cv2.resize(img, None, fx = 0.1, fy=0.1, interpolation=cv2.INTER_AREA)    # 150 802 bytes
+    compress_img = cv2.resize(img, None, fx = 0.3, fy=0.3, interpolation=cv2.INTER_AREA)    # 150 802 bytes with scaling 0.1
     compress_img = cv2.imencode(".jpg", compress_img)[1]
 
     dat = compress_img.tostring()
@@ -111,12 +111,16 @@ def TCPOut(s, HOST, PORT, HEADERSIZE):
         GuiDataOut = {
             "image": "",
             "temp": config.temp,
-            "pressure": config.pressure,
+            "depth": config.depth,
             "leak": config.leak,
             "angle": config.angle,
             "step": config.step,
             "lockedZones": config.interlockedZones,
-            "dataArray": config.data_lst
+            "dataArray": config.data_lst,
+            "salinity": config.salinity,
+            "conductivity": config.conductivity,
+            "density": config.density
+
         }
 
         # Serializing the dicitionary and sending
@@ -131,13 +135,13 @@ def UDP():
     port = 20001
     fs = FrameSegment(s, port)
 
-    # cap = cv2.VideoCapture(0)
-    vs = VideoStream(src=0).start()
+    cap = cv2.VideoCapture(0)
+    # vs = VideoStream(src=0).start()
 
     while 1:
-        # _, frame = cap.read()
+        _, frame = cap.read()
+        # frame = vs.read()
 
-        frame = vs.read()
         fs.udp_frame(frame)
 
     cap.release()
@@ -152,7 +156,7 @@ def serialCom():
     print(f'Arduino serial communication status: {ardSer.isOpen()}')
 
 
-    condSer = serial.Serial('/dev/ttyUSB0', 9600)
+    condSer = serial.Serial('/dev/ttyUSB1', 9600)
     print(f'Conductivity sensor communication status: {condSer.isOpen()}')
 
     time.sleep(2)
@@ -163,15 +167,10 @@ def serialCom():
         """
         condSer.write("do_sample\n".encode())   # Commands conductivity sensor to conduct sample of parameters
 
-        salinityReading = getAanderaaData(condSer, "get_salinity\n")
+        config.salinity = getAanderaaData(condSer, "get_salinity\n")
         soundSpeedReading = getAanderaaData(condSer, "get_soundspeed\n")
-        densityReading = getAanderaaData(condSer, "get_density\n")
-        conductivityReading = getAanderaaData(condSer, "get_conductivity\n")
-
-        print(f'Salinity = {salinityReading}')
-        print(f'Sound of speed: {soundSpeedReading}')
-        print(f'Conductivity = {conductivityReading}')
-        print(f'density: {densityReading}')
+        config.density = getAanderaaData(condSer, "get_density\n")
+        config.conductivity = getAanderaaData(condSer, "get_conductivity\n")
 
 
         """
@@ -192,19 +191,17 @@ def serialCom():
         if ardSer.in_waiting > 0:
             ArdDataIn = json.loads(ardSer.readline())   # Deserializes input from Arduino
             config.temp = ArdDataIn["Temp"]
-            config.pressure = ArdDataIn["Pressure"]
+            config.depth = ArdDataIn["Depth"]
             config.leak = ArdDataIn["Leak"]
             # ardSer.write(ArdDataOut.encode())   # Responds with data to Arduino
 
         condIn = condSer.readline()  # Have to read the buffer to stop future splitting issues
 
 
-
-
-
 """
 Can be used with the picture taking functionality used in TCPOut communication
 """
+
 def commpressImage(img, k):
     width = int((img.shape[1])/k)
     height = int((img.shape[0])/k)

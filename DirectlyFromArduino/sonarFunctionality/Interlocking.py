@@ -34,7 +34,7 @@ class InterlockingSystem:
     def findObject (self, dataPoints):
         # Constants for object detectin, can be adjusted for range and sensitivity
         numOfValues = 100
-        thresholdObjDetect = 80
+        thresholdObjDetect = 40
 
         # Slicing list to appropiate values,changing this means changing what range are scanned for objects
         objectData = dataPoints[numOfValues:2*numOfValues]
