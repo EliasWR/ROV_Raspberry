@@ -33,6 +33,7 @@ class FrameSegment(object):
     compress_img = cv2.resize(img, None, fx = 0.3, fy=0.3, interpolation=cv2.INTER_AREA)    # 150 802 bytes with scaling 0.1
     compress_img = cv2.imencode(".jpg", compress_img)[1]
 
+
     dat = compress_img.tostring()
     size = len(dat)
     num_of_segments = math.ceil(size/(self.MAX_IMAGE_DGRAM))
@@ -75,9 +76,12 @@ def TCPIn():
                 print("[ATTENTION] New data has been applied to global variables from GUI commands")
                 # Setting the global variables accordingly
                 config.light = GuiDataIn["light"]
+                config.motorSpeed = GuiDataIn["motorSpeed"]
                 config.runZone = GuiDataIn["runZone"]
                 config.forceReset = GuiDataIn["forceReset"]
                 config.mode = GuiDataIn["mode"]
+                config.takeHighResPhoto = GuiDataIn["takePhoto"]
+
                 # changeOperatingMode(GuiDataIn["mode"])  # SET BY GUI
                 config.newArduinoCommands = True
 
@@ -134,15 +138,38 @@ def UDP():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     port = 20001
     fs = FrameSegment(s, port)
+    photoNum = 0
 
     cap = cv2.VideoCapture(0)
     # vs = VideoStream(src=0).start()
 
-    while 1:
-        _, frame = cap.read()
-        # frame = vs.read()
+    # Defining video saving variables
+    frame_width = int(cap.get(3))
+    frame_height = int(cap.get(4))
+    size = (frame_width, frame_height)
+    result = cv2.VideoWriter('/home/pi/Programs/Videos/myVideo.avi',
+    cv2.VideoWriter_fourcc(*'mp4v'), 3, size)
 
-        fs.udp_frame(frame)
+    while 1:
+    # If commanded from GUI, take photo and save to determined path
+        if config.takeHighResPhoto:
+
+            photoNum += 1
+            _, photo = cap.read()
+
+            status = cv2.imwrite(f'/home/pi/Programs/Photos/photo_{photoNum}.png', photo) # Photo was
+            # status = cv2.imwrite(f'/home/pi/Programs/Photos/photo_{photoNum}.jpg', photo, [cv2.IMWRITE_JPEG_QUALITY, 100])
+            print(f'Image written to file system status: {status}')
+            time.sleep(1)   # Sleeps for 1 second before resuming UDP video stream
+            config.takeHighResPhoto = False
+
+        # Creating logic that determines if user wants to save a resolution, the UDP stream should be cancelled
+        while not config.takeHighResPhoto:
+            _, frame = cap.read()
+            # frame = vs.read()
+
+            result.write(frame)
+            fs.udp_frame(frame)
 
     cap.release()
     cv2.destroyAllWindows()
