@@ -91,7 +91,7 @@ if __name__ == "__main__":
     UDPThread.start()
 
 
-    print("OPENING CAMERA PORT")
+    # print("OPENING CAMERA PORT")
     # cam = cv2.VideoCapture(0)   # Initializes connection to camera
     # vs = VideoStream(src=0).start()
 

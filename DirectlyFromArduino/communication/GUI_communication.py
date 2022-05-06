@@ -30,8 +30,8 @@ class FrameSegment(object):
     into data segments
     “””"""
     # compress_img = cv2.resize(img, None, fx = 0.4, fy=0.4, interpolation=cv2.INTER_AREA) # 2 420 000 bytes
-    compress_img = cv2.resize(img, None, fx = 0.3, fy=0.3, interpolation=cv2.INTER_AREA)    # 150 802 bytes with scaling 0.1
-    compress_img = cv2.imencode(".jpg", compress_img)[1]
+    # compress_img = cv2.resize(img, None, fx = 0.3, fy=0.3, interpolation=cv2.INTER_AREA)    # 150 802 bytes with scaling 0.1
+    compress_img = cv2.imencode(".jpg", img)[1]
 
 
     dat = compress_img.tostring()
@@ -81,6 +81,7 @@ def TCPIn():
                 config.forceReset = GuiDataIn["forceReset"]
                 config.mode = GuiDataIn["mode"]
                 config.takeHighResPhoto = GuiDataIn["takePhoto"]
+                config.takeVideo = GuiDataIn["takeVideo"]
 
                 # changeOperatingMode(GuiDataIn["mode"])  # SET BY GUI
                 config.newArduinoCommands = True
@@ -102,14 +103,6 @@ def TCPOut(s, HOST, PORT, HEADERSIZE):
             config.clientsocket, config.address = s.accept()
             print(f"Connection from {config.address} has been established.")
 
-        """
-        TODO: Implement logic that can take a high definition picture and send it over TCPIn
-        """
-
-        # ret_val, img = cam.read()   # Takes a photo with camera
-        # compressed_img = commpressImage(img, 5)    # Compressing image
-        # frame = vs.read()
-        # resized = imutils.resize(frame, width=600)
 
         # Finalizing dicitionary with all values to be sent to GUI
         GuiDataOut = {
@@ -139,23 +132,28 @@ def UDP():
     port = 20001
     fs = FrameSegment(s, port)
     photoNum = 0
+    videoNum = 0
 
-    cap = cv2.VideoCapture(0)
-    # vs = VideoStream(src=0).start()
+    print("OPENING CAMERA PORT")
+    # cap = cv2.VideoCapture(0)
+    cap = VideoStream(src=0).start()
+
 
     # Defining video saving variables
-    frame_width = int(cap.get(3))
-    frame_height = int(cap.get(4))
-    size = (frame_width, frame_height)
-    result = cv2.VideoWriter('/home/pi/Programs/Videos/myVideo.avi',
-    cv2.VideoWriter_fourcc(*'mp4v'), 3, size)
+    # frame_width = int(cap.get(3))
+    # frame_height = int(cap.get(4))
+    # size = (frame_width, frame_height)
+    size = (640, 480)
+    # result = cv2.VideoWriter('/home/pi/Programs/Videos/myVideo.avi',
+    # cv2.VideoWriter_fourcc(*'mp4v'), 12, size)
+
 
     while 1:
     # If commanded from GUI, take photo and save to determined path
         if config.takeHighResPhoto:
 
             photoNum += 1
-            _, photo = cap.read()
+            photo = cap.read()
 
             status = cv2.imwrite(f'/home/pi/Programs/Photos/photo_{photoNum}.png', photo) # Photo was
             # status = cv2.imwrite(f'/home/pi/Programs/Photos/photo_{photoNum}.jpg', photo, [cv2.IMWRITE_JPEG_QUALITY, 100])
@@ -163,13 +161,27 @@ def UDP():
             time.sleep(1)   # Sleeps for 1 second before resuming UDP video stream
             config.takeHighResPhoto = False
 
+
+
         # Creating logic that determines if user wants to save a resolution, the UDP stream should be cancelled
         while not config.takeHighResPhoto:
-            _, frame = cap.read()
-            # frame = vs.read()
+            # _, frame = cap.read()
+            frame = cap.read()
 
-            result.write(frame)
-            fs.udp_frame(frame)
+            if config.takeVideo:
+                print("Video is being recorded")
+                if not vidConfigured:
+                    videoNum += 1
+                    result = cv2.VideoWriter(f'/home/pi/Programs/Videos/Video{videoNum}.avi',
+                    cv2.VideoWriter_fourcc(*'mp4v'), 12, size)
+                    vidConfigured = True
+
+                result.write(frame) # Writing to disk as a video
+            else:
+                vidConfigured = False
+
+            # result.write(frame) # Writing to disk as a videol
+            fs.udp_frame(frame) # Sending to GUI using UDP communication
 
     cap.release()
     cv2.destroyAllWindows()

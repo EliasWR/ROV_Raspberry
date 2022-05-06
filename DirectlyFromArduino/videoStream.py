@@ -8,7 +8,7 @@ import cv2
 import sys
 
 
-vs = VideoStream(src=0).start()
+vs = VideoStream(src=2).start()
 # vs = .stream.set(3, 640)
 # vs = .stream.set(4, 480)
 

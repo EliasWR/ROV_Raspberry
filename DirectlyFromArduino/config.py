@@ -6,6 +6,7 @@ runZone = -1
 mode = 1
 forceReset = False
 takeHighResPhoto = False
+takeVideo = False
 
 # To GUI
 # image

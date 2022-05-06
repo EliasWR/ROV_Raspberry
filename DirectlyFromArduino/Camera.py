@@ -18,10 +18,8 @@ while True:
     result.write(frame)
     frame = cv2.resize(frame, None, fx = 0.3, fy = 0.3, interpolation=cv2.INTER_AREA)
 
-    print(type(frame))
-    print(sys.getsizeof(frame))
     i += 1
-    print(i)
+
     cv2.imshow('Input', frame)
     c = cv2.waitKey(1)
     if c == 27:
