@@ -12,7 +12,7 @@ takeVideo = False
 # image
 temp = 0
 depth = 0
-leak = True
+leak = False
 angle = 0
 data_lst = []
 step = 0
