@@ -1,18 +1,22 @@
-
-
+"""
+RASPBERRY PI SUB PROGRAM CONTAINING THE INTERLOCKING LOGIC
+NEEDED FOR ASSISTING THE OPERATOR OF THE ROV TO CONTROL THE
+ROV IN TIGHT SPACES.
+"""
 
 class InterlockingSystem:
-
     def __init__(self):
         print("Interlocking system initalized")
         self.lockedZones = [False] * 8
-        # List with indexes corresponding to zone, and values it what angle that zone was last locked in
         self.zoneLockedAngles = [None] * 8
 
+    # Resets all interloked zones
     def resetAllZones(self):
         print("Operator-forced reset of all interlocked zones")
         self.lockedZones = [False] * 8
 
+    # By taking in the currently scanned angle, finds which zone the angle
+    # is a part of, and return this zone
     def findZone (self, angle):
         if 175 < angle <= 225:
             return 0
@@ -31,16 +35,19 @@ class InterlockingSystem:
         else:
             return 4
 
+    # Function taking in the echo strengths from sonar, and finds if these
+    # values within close proximity is above a certain treshold, and determines
+    # if an object was located
     def findObject (self, dataPoints):
-        # Constants for object detectin, can be adjusted for range and sensitivity
+
+        # Constants for object detection, can be adjusted for range and sensitivity
         numOfValues = 100
         thresholdObjDetect = 40
 
-        # Slicing list to appropiate values,changing this means changing what range are scanned for objects
+        # Slicing list to appropiate values, changing this means changing what range are scanned for objects
         objectData = dataPoints[numOfValues:2*numOfValues]
         avrObj = sum(objectData)/numOfValues
         # print("Average echo strength (0-255): ", avrObj)
-
 
         # If average of datapoints is above threshold return true (object is detected)
         if avrObj > thresholdObjDetect:
@@ -48,7 +55,9 @@ class InterlockingSystem:
         else:
             return False
 
-
+    # Takes in zone and angle and interlocks that zone for no movement in that direction
+    # Additionally the angle which the object was located at is saved, for later resetting
+    # of zone during normal operation
     def setInterlockZone (self, zone, angle):
         if zone == 0:
             self.lockedZones[0] = True
@@ -77,13 +86,14 @@ class InterlockingSystem:
         else:
             print("Invalid set zone given")
 
-
+    # Checks if the scanned angle has been interlocked last revolution
+    # and if no object was found this reviolution, reset the zone
     def checkIfResetPermitted (self, angle):
         for i in range(len(self.zoneLockedAngles)):
             if (self.zoneLockedAngles[i] == angle):
                 self.resetInterlockZone(self.findZone(angle))
 
-
+    # Takes in an angle, and resets the zone containing that angle
     def resetInterlockZone (self, zone):
         if zone == 0:
             self.lockedZones[0] = False

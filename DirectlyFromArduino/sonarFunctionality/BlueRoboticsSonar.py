@@ -1,9 +1,15 @@
-# Importing Ping Protocol dependencies libraries
-# Libraries are located in Python3 folder in #!/usr/bin/env python3
+"""
+RASPBERRY PI SUB PROGRAM CONTAINING A PING 360 CLASS USED
+FOR CONTROLLING AND READING FROM THE SCANNING IMAGING SONAR
+
+MOST OF THIS CLASS, AND ALL OF THE <brping> MODULES IMPORTED
+BELOW, ARE DEVELOPED BY THE MANUFACTORER OF THE SCANNING IMAGING
+SONAR, BLUEROBOTICS.
+"""
+
 from brping import definitions
 from brping import PingDevice
 from brping import pingmessage
-
 
 class Ping360(PingDevice):
     def initialize(self):
@@ -11,7 +17,7 @@ class Ping360(PingDevice):
             return False
         if (self.readDeviceInformation() is None):
             return False
-        self._speed_of_sound = 1500         # Initializes sonar with 1500 m/s speed of sound
+        self._speed_of_sound = 1500         
         self._step = 2
         return True
 
@@ -213,13 +219,17 @@ class Ping360(PingDevice):
     def transmit(self):
         return self.transmitAngle(self._angle)
 
+    
+    """
+    Below functions are created specifically for the ROV project, functions over are developed
+    by the manufactor of the sonar, BlueRovotics.
+    """
 
-    ## New Ping360 class methods for adjusting scanning range
-    # Based on Ping-viewer c++ implementation for similar functionality
-
+    # Function that returns the currently set speed of sound
     def get_speed_of_sound(self):
         return self._speed_of_sound
 
+    # Function that changes the speed of sound
     def set_speed_of_sound(self, newSpeed):
         if (newSpeed == self.get_speed_of_sound()):
             print("Requested speed of sound is already set")
@@ -227,15 +237,14 @@ class Ping360(PingDevice):
         else:
             self._speed_of_sound = newSpeed
 
+    # Function that returns the sample period set for the sonar
     def samplePeriod(self):
         # Multiply with samplePeriodTickDuration which is 25 nanoseconds
         return self._sample_period * 25E-9
 
-
-    # Returns the set scanning range currently set
+    # Returns the currently set scanning range
     def get_range(self):
         return self.samplePeriod() * self._number_of_samples * self.get_speed_of_sound() / 2
-
 
     # Sets new sonar scan range
     def set_range(self, newRange):
@@ -246,18 +255,17 @@ class Ping360(PingDevice):
             # Calculate the new sample period to achieve requested distance
             self._sample_period = int(newRange/(self._number_of_samples*25E-9*750))
 
-
+    # Sets new step size, that indicates how many angles the sonar jumps for every iteration
     def set_step(self, newStep):
         self._step = newStep
 
-
+    # Returns the current step 
     def get_step(self):
         return self._step
 
+    # Function that changes settings needed for the sonar to scan in a new mode
     def changeOperatingMode(self, newMode):
         # Checks if input is different from last iteration
-
-
         if newMode == 0:
             self.set_range(20) # Short range collision avoidance mode
             self.set_step(4)
