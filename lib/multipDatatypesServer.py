@@ -10,8 +10,7 @@ import threading
 
 
 def communicationWithGUI():
-
-
+    
     HEADERSIZE = 10
 
     HOST = "169.254.226.72"  # The IP address of the RASPBERRY Pi assigns to this communication
@@ -62,14 +61,10 @@ def communicationWithGUI():
 
         # Receiving answer from computer
 
-
         while receiving:
             full_msg = b''
             new_msg = True
             while receiving:
-
-
-
                 incoming_message = clientsocket.recv(20000)
                 # print(incoming_message)
                 if new_msg:    # Changed rom if new_msg
@@ -89,14 +84,9 @@ def communicationWithGUI():
                     new_msg = True
                     full_msg = b''
 
-
-
 # Start a thread that handles communication with GUI
 t1 = threading.Thread(target=communicationWithGUI)
 t1.start()
-
-
-
 
 j = 0
 while True:
