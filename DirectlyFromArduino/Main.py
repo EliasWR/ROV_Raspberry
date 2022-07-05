@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     # Defining sonar parameters
     print("Initialized: %s" % p.initialize())
-    p.set_transmit_frequency(1000) 
+    p.set_transmit_frequency(1000)
     p.set_sample_period(50)
     p.set_number_of_samples(1200)
     p.set_range(50)
